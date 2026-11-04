@@ -209,6 +209,26 @@ This version has breaking changes — APIs, conventions, and file structure may 
 채점기준으로 만드는 AI 채점 초안'으로 다시 들어왔다(위 과제 제출 항목 참고). 되살릴 일이 생기면
 `C:\Users\rune_\my-webapp22`를 참고할 것.
 
+## 공유용 저장소 (`share` 원격)
+
+다른 선생님께 코드를 보여주려고 `RuneDaeg/science-research-webapp-share`(비공개)를 따로 두었다.
+원본(`origin`)의 **현재 파일 상태만** 커밋으로 옮긴 사본이고, 작업 이력은 원본에만 있다.
+
+- **`git push share main`을 하지 말 것.** 원본 이력이 통째로 넘어가는데, 예전 커밋의 설명서
+  스크린샷(03·07번)에 실제 학생 파일명(학번·이름)이 찍혀 있었다. 현재 파일은 고쳤지만 이력에는 남아 있다.
+- 공유용을 갱신할 때는 현재 트리로 새 커밋을 만들어 그것만 올린다. 이렇게 하면 지금 트리에 없는 옛 파일은
+  딸려 가지 않는다.
+
+  ```bash
+  git fetch share
+  SHA=$(git commit-tree HEAD^{tree} -p share/main -m "원본 $(git rev-parse --short HEAD) 반영")
+  git push share "$SHA:refs/heads/main"
+  ```
+- 작성자 이메일은 GitHub 비공개 주소(`301861785+RuneDaeg@users.noreply.github.com`)로 둔다
+  (`GIT_AUTHOR_EMAIL`·`GIT_COMMITTER_EMAIL` 환경변수로 지정).
+- 매일 새벽 DB 백업이 쌓이는 `science-research-webapp-backup`과 헷갈리지 말 것. 그쪽에는 실제 학생
+  데이터가 있으므로 누구와도 공유하지 않는다.
+
 ## 민감한 실제 파일로 테스트할 때
 
 사용자가 실제 학교 파일 경로를 공유하며 테스트를 요청하면 **`public/`에 절대 복사하지 않는다**
