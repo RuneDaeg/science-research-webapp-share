@@ -1,0 +1,8 @@
+# Supabase CLI 설정. `npx supabase link --project-ref <ref>` 후 db push에 쓰인다.
+# project_id는 로컬 개발용 컨테이너 이름으로만 쓰이며, 원격 프로젝트는 link로 결정된다.
+#
+# [주의] auth 설정(이메일 확인 여부 등)은 여기에 적지 않는다 — CLI 버전마다 허용 키가 달라
+# `failed to parse config: 'auth' has invalid keys` 로 db push가 통째로 막힌다.
+# 이메일 확인은 Supabase 대시보드 → Authentication → Sign In / Providers → Email 에서 끈다
+# (SMTP를 설정하지 않았다면 꺼야 학생이 가입 즉시 로그인할 수 있다).
+project_id = "science-research-webapp"

@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>과학과제연구 탐구 도우미 사용 설명서</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 16mm 16mm; }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
+    color: #1f2937;
+    font-size: 10.5pt;
+    line-height: 1.65;
+    margin: 0;
+  }
+
+  h1 { font-size: 20pt; margin: 0 0 4mm; letter-spacing: -0.02em; }
+  h2 {
+    font-size: 14pt;
+    margin: 0 0 4mm;
+    padding-bottom: 2mm;
+    border-bottom: 2px solid #111827;
+  }
+  h3 { font-size: 11.5pt; margin: 7mm 0 2mm; color: #111827; }
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1.2mm; }
+
+  code {
+    font-family: Consolas, "D2Coding", monospace;
+    background: #f3f4f6;
+    padding: 0.5mm 1.2mm;
+    border-radius: 2px;
+    font-size: 9.5pt;
+  }
+
+  .cover {
+    height: 235mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+  }
+  .cover .kicker { color: #6b7280; font-size: 11pt; letter-spacing: 0.15em; margin-bottom: 6mm; }
+  .cover h1 { font-size: 30pt; line-height: 1.3; }
+  .cover .sub { color: #4b5563; font-size: 12pt; margin-top: 4mm; }
+  /* 대상(학생용/선생님용)은 render.mjs가 표지에 넣는다. */
+  .cover .audience {
+    margin-top: 5mm;
+    display: inline-block;
+    align-self: center;
+    border: 1px solid #111827;
+    border-radius: 999px;
+    padding: 1.5mm 6mm;
+    font-size: 11pt;
+    font-weight: 700;
+  }
+  .cover .url {
+    margin-top: 14mm;
+    font-family: Consolas, monospace;
+    font-size: 11pt;
+    color: #1d4ed8;
+  }
+  .cover .meta { margin-top: 20mm; color: #9ca3af; font-size: 9.5pt; }
+
+  .page { page-break-before: always; }
+
+  figure { margin: 3mm 0 6mm; page-break-inside: avoid; }
+  /* 비율을 유지한 채 페이지 안에 맞춘다. width:100%로 고정하면 세로로 긴 스크린샷에서
+     오른쪽에 빈 공간(레터박스)이 생긴다. */
+  figure img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 180mm;
+    margin: 0 auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+  }
+  figcaption { font-size: 8.5pt; color: #6b7280; margin-top: 1.5mm; text-align: center; }
+
+  .note {
+    border-left: 3px solid #2563eb;
+    background: #eff6ff;
+    padding: 3mm 4mm;
+    margin: 4mm 0;
+    font-size: 9.5pt;
+  }
+  .warn {
+    border-left: 3px solid #d97706;
+    background: #fffbeb;
+    padding: 3mm 4mm;
+    margin: 4mm 0;
+    font-size: 9.5pt;
+  }
+  /* 첫 줄 제목만 블록으로. 모든 strong에 걸면 문장 중간의 강조가 줄바꿈된다. */
+  .note > strong:first-child, .warn > strong:first-child { display: block; margin-bottom: 1mm; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 3mm 0 5mm; }
+  th, td { border: 1px solid #d1d5db; padding: 2mm 3mm; text-align: left; vertical-align: top; }
+  th { background: #f9fafb; font-weight: 600; }
+
+  /* 표 안의 상태 배지 — figure img 규칙(가운데 정렬·큰 여백)이 적용되지 않도록 따로 잡는다. */
+  img.badge {
+    height: 6.5mm;
+    width: auto;
+    display: block;
+    border: none;
+    margin: 0;
+  }
+
+  .steps { counter-reset: step; padding-left: 0; list-style: none; }
+  .steps > li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 9mm;
+    margin-bottom: 3mm;
+  }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0.3mm;
+    width: 6mm; height: 6mm;
+    background: #111827; color: #fff;
+    border-radius: 50%;
+    font-size: 8.5pt;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .role {
+    display: inline-block;
+    font-size: 9pt;
+    padding: 0.8mm 2.5mm;
+    border-radius: 10px;
+    margin-bottom: 3mm;
+  }
+  .role.student { background: #ecfdf5; color: #065f46; }
+  .role.teacher { background: #eff6ff; color: #1e40af; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="kicker">2022 개정 교육과정 · 과학과제연구</div>
+  <h1>탐구 도우미<br>사용 설명서</h1>
+  <div class="sub">학생이 산출물을 올리면 AI가 넛지 피드백을 주고,<br>선생님이 이어서 지도합니다.</div>
+  <div class="url">science-research-webapp.vercel.app</div>
+  <div class="meta">2026학년도 2학기</div>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <h2>1. 시작하기</h2>
+
+  <p>인터넷 브라우저에서 아래 주소로 접속합니다. 별도 프로그램 설치는 필요 없고,
+  휴대폰에서도 됩니다.</p>
+
+  <p style="font-family: Consolas, monospace; font-size: 12pt; color:#1d4ed8;">
+    https://science-research-webapp.vercel.app
+  </p>
+
+  <h3>로그인</h3>
+  <ul>
+    <li><strong>학생</strong> — 첫 화면 아래 <em>회원가입</em>으로 직접 계정을 만듭니다.</li>
+    <li><strong>선생님</strong> — 계정은 관리자가 발급합니다. 받으신 이메일과 비밀번호로 로그인하세요.</li>
+  </ul>
+
+  <figure>
+    <img src="shots/01-login.png" alt="로그인 화면">
+    <figcaption>로그인 화면. 학생은 아래 &lsquo;회원가입&rsquo;으로 가입합니다.</figcaption>
+  </figure>
+
+  <div class="warn">
+    <strong>선생님 계정은 스스로 가입할 수 없습니다</strong>
+    회원가입으로 만든 계정은 항상 학생 권한입니다. 선생님 계정은 관리자만 발급할 수 있고,
+    받으신 비밀번호는 첫 로그인 뒤 <code>내 계정</code>에서 각자 바꿔주세요.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <span class="role student">학생용</span>
+  <h2>2. 학생 — 연구 시작하기</h2>
+
+  <h3>2-1. 클래스 참여</h3>
+  <p>선생님께 받은 <strong>참여 코드 6자리</strong>를 입력하면 우리 반에 들어갑니다. 맨 처음 한 번만 하면 됩니다.</p>
+
+  <figure>
+    <img src="shots/02-join.png" alt="클래스 참여 화면">
+    <figcaption>상단 메뉴 &lsquo;클래스 참여&rsquo; → 참여 코드 입력</figcaption>
+  </figure>
+
+  <h3>2-2. 연구 등록</h3>
+  <p>탐구 주제를 등록합니다. 개인 연구도 되고 팀 연구도 됩니다.
+  팀이면 등록한 사람이 팀장이 되고, 같은 반 친구를 팀원으로 추가할 수 있습니다.</p>
+
+  <figure>
+    <img src="shots/04-project-new.png" alt="연구 등록 화면">
+    <figcaption>연구 제목·분야·연구 질문을 적습니다. 연구 질문은 나중에 고칠 수 있습니다.</figcaption>
+  </figure>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <span class="role student">학생용</span>
+  <h2>3. 학생 — 산출물 제출</h2>
+
+  <p>등록한 연구를 열면 아래쪽에 제출 칸이 있습니다.</p>
+
+  <ol class="steps">
+    <li><strong>산출물 단계</strong>를 고릅니다. 고른 단계에 맞는 기준으로 AI가 피드백합니다.</li>
+    <li><strong>제목</strong>은 비워두면 파일 이름을 그대로 씁니다.</li>
+    <li><strong>메모</strong>는 선택입니다. 여기 적은 내용도 AI에게 함께 전달되니,
+        특별히 봐줬으면 하는 부분을 적으면 좋습니다.</li>
+    <li><strong>파일</strong>을 고르고 제출합니다.</li>
+  </ol>
+
+  <figure>
+    <img src="shots/05-upload.png" alt="산출물 제출 화면">
+    <figcaption>산출물 제출 칸</figcaption>
+  </figure>
+
+  <table>
+    <tr><th style="width:32%">단계</th><th>AI가 보는 기준</th></tr>
+    <tr><td>탐구 계획 및 설계</td><td>현실성, 변인 통제, 주제 난이도가 적절한지</td></tr>
+    <tr><td>연구 일지</td><td>기록이 구체적인지, 계획과 달라진 점, 다음에 확인할 것</td></tr>
+    <tr><td>중간 · 최종 보고서</td><td>데이터 해석의 타당성, 오차 분석</td></tr>
+  </table>
+
+  <div class="note">
+    <strong>파일은 pdf · docx · hwpx · txt, 최대 20MB</strong>
+    <code>.hwp</code>는 지원하지 않습니다. 한글에서 <em>다른 이름으로 저장</em> → <strong>HWPX</strong>로 저장해 올려주세요.
+    PDF는 표·그래프·사진까지 AI가 함께 봅니다.
+  </div>
+
+  <div class="warn">
+    <strong>제출이 먼저, 피드백은 그다음입니다</strong>
+    버튼이 &lsquo;AI 피드백 받는 중&rsquo;으로 바뀌면 <strong>제출은 이미 끝난 것</strong>입니다.
+    피드백 생성에는 1~2분이 걸릴 수 있고, 그 사이 창을 닫아도 제출은 그대로 남습니다.
+    같은 파일을 다시 올리지 마세요.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <span class="role student">학생용</span>
+  <h2>4. 학생 — AI 피드백 확인</h2>
+
+  <p>제출한 산출물 아래에 AI 탐구 조력자의 피드백이 붙습니다.
+  <strong>정답을 알려주는 것이 아니라 스스로 생각해볼 질문을 던지는 방식</strong>입니다.</p>
+
+  <figure>
+    <img src="shots/06-ai-feedback.png" alt="AI 피드백이 붙은 산출물">
+    <figcaption>제출한 산출물과 AI 피드백</figcaption>
+  </figure>
+
+  <div class="note">
+    <strong>피드백이 안 보이면</strong>
+    아직 만들어지는 중일 수 있습니다. 잠시 뒤 새로고침해도 안 보이면
+    <code>AI 피드백 다시 받기</code> 버튼을 눌러주세요. 제출물은 사라지지 않습니다.
+  </div>
+
+  <h3>화면 오른쪽 위 &lsquo;AI 응답&rsquo; 표시</h3>
+
+  <p>제출이 한꺼번에 몰리면 피드백 생성이 느려집니다. 지금 어느 정도인지 미리 알 수 있도록
+  화면 오른쪽 위에 표시됩니다. 최근 30분 동안 실제로 걸린 시간을 기준으로 하며,
+  제출이 없어 판단할 근거가 없으면 아무것도 표시되지 않습니다.</p>
+
+  <table>
+    <tr>
+      <th style="width:34%">표시</th>
+      <th style="width:30%">뜻</th>
+      <th>이렇게 하세요</th>
+    </tr>
+    <tr>
+      <td><img class="badge" src="shots/11-badge-smooth.png" alt="AI 응답 원활"></td>
+      <td>평소 속도</td>
+      <td>그냥 제출하면 됩니다.</td>
+    </tr>
+    <tr>
+      <td><img class="badge" src="shots/12-badge-busy.png" alt="AI 응답 주의"></td>
+      <td>평소보다 느림</td>
+      <td>피드백이 조금 늦게 옵니다. 기다려주세요.</td>
+    </tr>
+    <tr>
+      <td><img class="badge" src="shots/13-badge-congested.png" alt="AI 응답 혼잡"></td>
+      <td>많이 지연됨</td>
+      <td>피드백이 한참 걸리거나 실패할 수 있습니다.
+          <strong>다시 올리지 마세요.</strong> 나중에 <code>다시 받기</code>로 받으면 됩니다.</td>
+    </tr>
+  </table>
+
+  <div class="warn">
+    <strong>어떤 상태든 제출 자체는 정상 완료됩니다</strong>
+    이 표시는 <em>피드백이 언제 오는지</em>에 대한 안내일 뿐입니다.
+    &lsquo;혼잡&rsquo;이라고 해서 제출이 안 된 것이 아니니, 같은 파일을 다시 올리지 마세요.
+    오히려 더 밀리게 됩니다.
+  </div>
+
+  <p>옆에 적힌 초는 최근 피드백 생성에 걸린 시간입니다. 표시에 마우스를 올리면
+  자세한 설명이 나옵니다.</p>
+
+  <p>마지막으로, AI 피드백은 참고 자료입니다. 그대로 받아들이기보다
+  비판적으로 따져보고 교과서나 다른 문헌과 교차검증해 보세요.</p>
+
+  <h3>잘못 올렸거나 연구를 접었을 때</h3>
+
+  <ul>
+    <li><strong>산출물 하나만</strong> 지우려면 목록에서 그 산출물의 <code>삭제</code>를 누릅니다.
+        본인이 올린 것만 지울 수 있습니다.</li>
+    <li><strong>연구 과제 전체</strong>를 지우려면 페이지 맨 아래 <code>연구 과제 삭제</code>를
+        누릅니다. 연구를 만든 사람(팀장)만 할 수 있고, 팀원에게는 보이지 않습니다.</li>
+  </ul>
+
+  <figure>
+    <img src="shots/14-delete-confirm.png" alt="연구 과제 삭제 확인">
+    <figcaption>지워질 산출물이 몇 건인지 확인한 뒤 진행합니다.</figcaption>
+  </figure>
+
+  <div class="warn">
+    <strong>선생님 피드백이 달리면 지울 수 없습니다</strong>
+    선생님이 지도 피드백을 남긴 뒤에는 학생이 연구 과제를 삭제할 수 없습니다.
+    선생님이 남긴 기록까지 함께 사라지기 때문입니다. 그래도 지워야 한다면
+    담당 선생님께 요청하세요.
+  </div>
+
+  <figure>
+    <img src="shots/15-delete-blocked.png" alt="선생님 피드백이 있어 삭제할 수 없는 화면">
+    <figcaption>이 안내가 보이면 삭제 버튼 대신 선생님께 요청해야 합니다.</figcaption>
+  </figure>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <span class="role student">학생용</span>
+  <h2>5. 학생 — 과제 · 평가 제출</h2>
+
+  <p>선생님이 올린 과제에 파일을 제출합니다. 앞의 <strong>연구 산출물과는 다릅니다</strong> —
+  산출물은 내 연구에 딸린 것이고, 과제는 반 전체에 내주는 것입니다.
+  <strong>과제 제출물에는 AI 피드백이 붙지 않습니다.</strong></p>
+
+  <p>대시보드 위쪽 <code>과제 · 평가</code> 목록에서 지금 무엇이 남았는지 한눈에 보입니다.</p>
+
+  <figure>
+    <img src="shots/18-assignment-student-list.png" alt="학생 대시보드의 과제 목록">
+    <figcaption>제출 완료 / 미제출 / 미제출 · 마감 지남이 오른쪽에 표시됩니다.</figcaption>
+  </figure>
+
+  <p>과제를 누르면 안내와 마감을 확인하고 파일을 올릴 수 있습니다. 메모를 함께 적으면
+  선생님께 전달됩니다.</p>
+
+  <figure>
+    <img src="shots/19-assignment-student-submit.png" alt="학생 과제 제출 화면">
+    <figcaption>파일을 고르고 &lsquo;제출하기&rsquo;를 누릅니다.</figcaption>
+  </figure>
+
+  <p><strong>파일은 여러 개 낼 수 있습니다.</strong> 한 번에 여러 개를 골라도 되고,
+  나중에 <code>파일 더 제출하기</code>로 보태도 됩니다. 이미 낸 파일은 그대로 남고
+  새 파일이 목록에 더해집니다.</p>
+
+  <figure>
+    <img src="shots/20-assignment-student-files.png" alt="파일 여러 개를 제출한 학생 화면">
+    <figcaption>낸 파일이 목록으로 쌓입니다. 파일 이름을 누르면 내려받고,
+    오른쪽 &lsquo;삭제&rsquo;로 하나씩 지웁니다.</figcaption>
+  </figure>
+
+  <div class="note">
+    <strong>마감이 지나도 제출할 수 있습니다</strong>
+    다만 선생님 화면에 &lsquo;지각 제출&rsquo;로 표시됩니다. 늦었더라도 내는 편이 낫습니다.
+  </div>
+
+  <div class="warn">
+    <strong>수정본을 올려도 이전 파일은 지워지지 않습니다</strong>
+    선생님께는 목록에 있는 파일이 모두 보입니다. 바꿔 낸 것이라면 <strong>이전 파일을
+    직접 삭제</strong>하세요. 파일을 모두 지우면 다시 미제출로 돌아갑니다. 파일 형식과
+    크기는 산출물과 같습니다(pdf · docx · hwpx · txt, 각 최대 20MB).
+  </div>
+
+  <div class="note">
+    <strong>선생님이 피드백을 공개하면 과제 화면에 나타납니다</strong>
+    선생님이 채점기준으로 AI 채점을 돌린 뒤 공개하면, 과제 화면에
+    &lsquo;선생님이 공개한 피드백&rsquo;이 보입니다. 점수는 나오지 않습니다 — 점수는 선생님이
+    정해서 따로 알려주십니다.
+  </div>
+
+  <figure>
+    <img src="shots/24-student-grade-feedback.png" alt="학생 과제 화면의 선생님이 공개한 피드백">
+    <figcaption>선생님이 공개한 피드백. 점수는 나오지 않습니다.</figcaption>
+  </figure>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <span class="role teacher">선생님용</span>
+  <h2>6. 선생님 — 클래스 운영</h2>
+
+  <p>로그인하면 담당 클래스와 검토가 필요한 산출물이 한눈에 보입니다.</p>
+
+  <figure>
+    <img src="shots/07-teacher-dashboard.png" alt="교사 대시보드">
+    <figcaption>교사 대시보드. 클래스 카드 오른쪽의 6자리가 참여 코드입니다.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>참여 코드</strong>를 학생에게 알려주면 학생이 클래스에 들어옵니다.</li>
+    <li><strong>검토 대기 산출물</strong>을 누르면 해당 산출물로 바로 이동합니다.</li>
+    <li>클래스를 열면 <strong>공지</strong>를 올릴 수 있고, 학생 화면에 표시됩니다.</li>
+  </ul>
+
+  <div class="note">
+    <strong>다른 반은 보이지 않습니다</strong>
+    선생님은 본인이 만든 클래스와 그 학생의 산출물만 볼 수 있습니다.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <span class="role teacher">선생님용</span>
+  <h2>7. 선생님 — 산출물 검토</h2>
+
+  <p>학생 산출물과 AI 피드백을 나란히 보고, 이어서 지도 피드백을 남깁니다.</p>
+
+  <figure>
+    <img src="shots/08-teacher-review.png" alt="교사 산출물 검토 화면">
+    <figcaption>AI 피드백에는 별점과 &lsquo;2단계 검증&rsquo; 버튼이 함께 표시됩니다.</figcaption>
+  </figure>
+
+  <div class="note">
+    <strong>별점은 선생님에게만 보입니다</strong>
+    AI가 자기 피드백의 완성도를 스스로 매긴 점수입니다. 낮게 나왔다면
+    <code>2단계 검증 재실행</code>으로 사실관계를 다시 확인시킬 수 있습니다.
+  </div>
+
+  <h3>연구 과제 삭제</h3>
+
+  <p>학생이 잘못 만든 연구 과제는 담당 선생님이 정리할 수 있습니다. 연구 과제 페이지 맨 아래
+  <code>연구 과제 삭제</code>를 누르면 됩니다.</p>
+
+  <div class="warn">
+    <strong>학생과 달리 선생님은 피드백이 있어도 지울 수 있습니다</strong>
+    학생은 선생님 피드백이 달린 과제를 지울 수 없지만, 선생님에게는 제한이 없습니다.
+    지울지 판단하는 주체가 선생님이기 때문입니다. 학생이 삭제를 요청해 오면 여기서 처리하시면 됩니다.
+    <strong>삭제하면 학생의 산출물과 모든 피드백이 함께 사라지고 되돌릴 수 없으며,
+    학생에게 별도 안내가 가지 않으니 미리 알려주세요.</strong>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <span class="role teacher">선생님용</span>
+  <h2>8. 선생님 — 피드백 작성</h2>
+
+  <p>입력칸에 적고 <code>피드백 저장</code>을 누르면 학생 화면에 나타납니다.
+  <strong>학생에게 공개</strong> 체크를 풀면 나만 보는 메모로 남길 수 있습니다.</p>
+
+  <h3>수식과 서식 쓰기</h3>
+  <p>피드백에는 수식과 서식을 쓸 수 있습니다.
+  <code>미리보기</code>를 누르면 학생에게 어떻게 보일지 바로 확인됩니다.</p>
+
+  <figure>
+    <img src="shots/09-teacher-feedback-form.png" alt="선생님 피드백 미리보기">
+    <figcaption>위는 입력한 그대로, 아래는 학생에게 보이는 모습</figcaption>
+  </figure>
+
+  <p>입력칸 아래 <code>수식·서식 쓰는 법</code>을 펼치면 자주 쓰는 표현이 예시와 함께 정리되어 있습니다.</p>
+
+  <figure>
+    <img src="shots/10-latex-help.png" alt="수식 작성 도움말">
+    <figcaption>왼쪽처럼 쓰면 오른쪽처럼 보입니다.</figcaption>
+  </figure>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <span class="role teacher">선생님용</span>
+  <h2>9. 선생님 — 과제 · 평가 내주기</h2>
+
+  <p>클래스 화면의 <code>과제 · 평가</code>에서 제목과 안내, 마감 일시를 적어 등록합니다.
+  마감은 선택이며, 지나도 학생 제출을 막지는 않습니다.</p>
+
+  <figure>
+    <img src="shots/16-assignment-teacher-list.png" alt="교사 클래스 화면의 과제 목록과 등록 폼">
+    <figcaption>등록한 과제와 제출 건수가 함께 보입니다.</figcaption>
+  </figure>
+
+  <p>과제를 누르면 제출 현황이 나옵니다. 학생이 낸 파일을 눌러 바로 내려받을 수 있습니다.
+  한 학생이 파일을 여러 개 냈다면 이름 아래에 모두 나열됩니다.</p>
+
+  <figure>
+    <img src="shots/17-assignment-teacher-detail.png" alt="과제 제출 현황 화면">
+    <figcaption>제출한 학생, 제출 시각, 낸 파일, 학생 메모가 함께 정리됩니다.</figcaption>
+  </figure>
+
+  <div class="note">
+    <strong>미제출 학생 명단이 함께 나옵니다</strong>
+    제출자 목록 아래에 아직 내지 않은 학생 이름이 모여 표시됩니다. 마감이 지난 뒤
+    제출한 학생에게는 &lsquo;지각 제출&rsquo; 표시가 붙습니다.
+  </div>
+
+  <div class="warn">
+    <strong>과제를 삭제하면 학생 제출 파일도 함께 사라집니다</strong>
+    되돌릴 수 없습니다. 학생에게는 별도 안내가 가지 않으니 미리 알려주세요.
+  </div>
+
+  <h3>채점기준으로 AI 채점하기</h3>
+  <ol>
+    <li>과제 화면의 <code>채점기준 · AI 채점</code>에서 채점기준 파일(평가 계획서 등)을 올립니다.
+        계획서에 평가가 여러 개 있으면 과제 제목에 맞는 것을 골라 씁니다.</li>
+    <li><code>AI 채점하기</code>를 누르면 아직 채점하지 않은 학생을 한 명씩 채점합니다.
+        한 명에 10~30초쯤 걸립니다.</li>
+    <li>학생마다 평가요소별 점수와 근거, 채점에서 뺀 요소(발표처럼 파일로 볼 수 없는 것),
+        선생님이 확인할 것, 학생에게 줄 피드백이 나옵니다.</li>
+    <li>피드백을 확인한 뒤 <code>학생에게 공개</code>를 누르면 학생 화면에 피드백 문장만 보입니다.</li>
+  </ol>
+
+  <figure>
+    <img src="shots/21-assignment-rubric.png" alt="과제 화면의 채점기준 · AI 채점 칸">
+    <figcaption>채점기준 파일을 올리면 &lsquo;AI 채점하기&rsquo;가 켜집니다. 괄호 안은 채점할 학생 수입니다.</figcaption>
+  </figure>
+
+  <figure>
+    <img src="shots/22-assignment-ai-grade.png" alt="AI 채점 결과 카드">
+    <figcaption>평가요소별 점수와 근거, 선생님이 확인할 것, 학생에게 줄 피드백이 한 카드에 나옵니다.</figcaption>
+  </figure>
+
+  <div class="warn">
+    <strong>AI 점수는 참고용 초안입니다</strong>
+    같은 제출물도 채점할 때마다 판단이 조금씩 달라질 수 있습니다. 근거를 읽고 최종 점수는
+    직접 정해 주세요. AI 점수는 학생에게 보이지 않고, 다시 채점하면 공개가 풀립니다.
+    채점 뒤 학생이 파일을 더 내면 &lsquo;다시 채점 필요&rsquo;로 표시됩니다.
+  </div>
+
+  <h3>학생별로 모아 보기</h3>
+  <p>클래스 화면 맨 아래 <code>학생 명단</code>에서 이름을 누르면, 그 학생의 연구 산출물
+  (hwpx · docx · txt는 본문까지)과 과제 제출물, AI 채점 결과를 한 화면에서 볼 수 있습니다.</p>
+
+  <figure>
+    <img src="shots/23-teacher-student-detail.png" alt="학생별 모아 보기 화면">
+    <figcaption>학생 한 명의 연구 산출물과 과제 제출물. &lsquo;본문 보기&rsquo;를 누르면 글이 펼쳐집니다.</figcaption>
+  </figure>
+</section>
+
+<!-- ─────────────────────────────────────────── -->
+<section class="page">
+  <h2>10. 자주 묻는 것</h2>
+
+  <table>
+    <tr><th style="width:38%">상황</th><th>이렇게 하세요</th></tr>
+    <tr>
+      <td>한글 파일을 못 올리겠어요</td>
+      <td><code>.hwp</code>는 지원하지 않습니다. 한글에서 <em>다른 이름으로 저장</em> → <strong>HWPX</strong>로 저장해 올리세요.</td>
+    </tr>
+    <tr>
+      <td>제출 버튼을 눌렀는데 오래 걸려요</td>
+      <td>&lsquo;AI 피드백 받는 중&rsquo;이면 제출은 이미 끝났습니다. 창을 닫아도 됩니다.</td>
+    </tr>
+    <tr>
+      <td>AI 피드백이 안 보여요</td>
+      <td>생성 중일 수 있습니다. 잠시 뒤에도 없으면 <code>다시 받기</code>를 누르세요.</td>
+    </tr>
+    <tr>
+      <td>오늘 피드백을 더 못 받아요</td>
+      <td>학생 1인당 하루 사용 횟수 제한이 있습니다. 다음 날 다시 되고, 급하면 선생님께 문의하세요.</td>
+    </tr>
+    <tr>
+      <td>산출물을 잘못 올렸어요</td>
+      <td>본인이 올린 산출물은 목록에서 <code>삭제</code>할 수 있습니다.</td>
+    </tr>
+    <tr>
+      <td>연구 과제를 잘못 만들었어요</td>
+      <td>연구 과제 페이지 맨 아래 <code>연구 과제 삭제</code>를 누릅니다. 연구를 만든
+          사람(팀장)만 할 수 있고, 산출물과 피드백이 모두 함께 사라집니다.</td>
+    </tr>
+    <tr>
+      <td>삭제 버튼이 안 보여요</td>
+      <td>선생님 피드백이 달린 과제는 학생이 지울 수 없습니다. 담당 선생님께 삭제를
+          요청하세요. 팀원인 경우에도 보이지 않습니다 — 팀장에게 부탁하세요.</td>
+    </tr>
+    <tr>
+      <td>과제에 AI 피드백이 안 달려요</td>
+      <td>과제에는 자동 AI 피드백이 붙지 않습니다. 선생님이 AI 채점 뒤 공개하면 과제 화면에
+          &lsquo;선생님이 공개한 피드백&rsquo;이 나타납니다.</td>
+    </tr>
+    <tr>
+      <td>과제 마감이 지났어요</td>
+      <td>그래도 제출할 수 있습니다. 선생님 화면에 &lsquo;지각 제출&rsquo;로 표시됩니다.</td>
+    </tr>
+    <tr>
+      <td>과제를 잘못 제출했어요</td>
+      <td>고친 파일을 다시 올린 뒤, 잘못 낸 파일을 목록 오른쪽 <code>삭제</code>로 지우면
+          됩니다. 새로 올린다고 이전 파일이 자동으로 없어지지는 않습니다.</td>
+    </tr>
+    <tr>
+      <td>비밀번호를 바꾸고 싶어요</td>
+      <td>오른쪽 위 이름을 눌러 <code>내 계정</code>에서 변경합니다.</td>
+    </tr>
+  </table>
+
+  <h2 style="margin-top:10mm">개인정보 안내</h2>
+  <ul>
+    <li>업로드한 산출물과 피드백은 <strong>같은 팀 팀원과 담당 선생님만</strong> 볼 수 있습니다.</li>
+    <li>피드백 생성을 위해 산출물 내용이 생성형 AI 제공사로 전송됩니다.
+        <strong>산출물에 이름·학번 등 불필요한 개인정보를 적지 않는 것을 권장</strong>합니다.</li>
+    <li>자세한 내용은 화면 아래 <em>개인정보처리방침</em>에서 확인할 수 있습니다.</li>
+  </ul>
+</section>
+
+</body>
+</html>

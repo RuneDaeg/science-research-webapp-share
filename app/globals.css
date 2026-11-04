@@ -1,0 +1,25 @@
+@import "tailwindcss";
+/* AI 피드백의 LaTeX 수식을 KaTeX로 렌더링하는 데 필요한 스타일(폰트 포함). */
+@import "katex/dist/katex.min.css";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* 이 앱은 다크모드 대응 디자인이 없고 모든 컴포넌트가 밝은 배경(bg-white 등)을 고정 사용하므로,
+   시스템 다크모드에서 배경/글자색이 자동으로 뒤바뀌지 않도록 라이트 테마로 고정한다.
+   (안 그러면 입력창처럼 명시적 text color가 없는 요소는 밝은 배경 위에 밝은 글자색이 되어 안 보임) */
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}

@@ -1,0 +1,42 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — API 키가 들어가므로 절대 커밋하지 않는다
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# supabase
+.branches
+.temp
+
+.vercel
+.env*
+
+# 테스트 계정 메모 — 비밀번호가 들어 있으므로 커밋하지 않는다
+/test-accounts.local.md
