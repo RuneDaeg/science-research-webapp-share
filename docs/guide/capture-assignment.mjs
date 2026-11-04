@@ -33,6 +33,9 @@ const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_RO
 const TITLE = "[캡처용] 1차 중간 보고서 제출";
 let assignmentId = null;
 let filePaths = [];
+// 학생 목록(18번)에 세 가지 상태(제출 완료 / 미제출 / 미제출 · 마감 지남)가 모두 보이도록 함께
+// 만드는 임시 과제들. 테스트 학생의 반에 다른 과제가 없으면 목록이 한 줄뿐이라 설명이 안 된다.
+const extraIds = [];
 
 async function shot(page, name, selector) {
   const el = await page.$(selector);
@@ -101,6 +104,22 @@ try {
     due_at: due.toISOString(),
   }).select("id").single();
   assignmentId = a.id;
+
+  const { data: extras } = await admin.from("class_assignments").insert([
+    {
+      class_id: classId,
+      teacher_id: teacher.id,
+      title: "[캡처용] 연구 일지 2회차 제출",
+      due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      class_id: classId,
+      teacher_id: teacher.id,
+      title: "[캡처용] 탐구 계획서 제출",
+      due_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ]).select("id");
+  extraIds.push(...(extras ?? []).map((x) => x.id));
 
   // ── 학생 화면: 제출 전 ────────────────────────────────────
   console.log("학생 화면 (제출 전)");
@@ -171,6 +190,7 @@ try {
 } finally {
   if (assignmentId) {
     await admin.from("class_assignments").delete().eq("id", assignmentId);
+    if (extraIds.length) await admin.from("class_assignments").delete().in("id", extraIds);
     if (filePaths.length) await admin.storage.from("research-files").remove(filePaths);
     console.log("임시 과제와 제출 파일 삭제 완료");
   }
