@@ -168,3 +168,8 @@ GitHub 연동이 걸려 있지 않으므로 `git push`만으로는 배포되지 
 
 환경변수는 Vercel 프로젝트 설정에 동일하게 등록해야 한다. 현재는 Production 스코프에만 있으므로
 `vercel env pull`로 받을 때 `--environment=production`을 붙여야 값이 채워진다.
+
+## 라이선스
+
+[MIT](LICENSE). 다른 학교에서도 자유롭게 고쳐 쓸 수 있다. 다만 운영하려면 Supabase 프로젝트와
+생성형 AI 키를 각자 마련해야 한다(위 설정 순서 참고). 학생 데이터는 이 저장소에 들어 있지 않다.
