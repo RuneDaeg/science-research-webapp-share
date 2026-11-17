@@ -37,12 +37,20 @@ let filePaths = [];
 // 만드는 임시 과제들. 테스트 학생의 반에 다른 과제가 없으면 목록이 한 줄뿐이라 설명이 안 된다.
 const extraIds = [];
 
+// 오른쪽 아래 '사용법 질문' 버튼이 요소 가장자리에 겹쳐 찍히지 않게 숨긴다.
+async function hideChatButton(page) {
+  await page.evaluate(() =>
+    document.querySelectorAll(".fixed.bottom-5").forEach((e) => (e.style.visibility = "hidden")),
+  );
+}
+
 async function shot(page, name, selector) {
   const el = await page.$(selector);
   if (!el) {
     console.log(`  ! ${name}: 요소 없음 (${selector})`);
     return;
   }
+  await hideChatButton(page);
   await el.scrollIntoView();
   await new Promise((r) => setTimeout(r, 300));
   await el.screenshot({ path: path.join(OUT, `${name}.png`) });
@@ -166,6 +174,7 @@ try {
   await page.goto(`${BASE}/student/dashboard`, { waitUntil: "networkidle2" });
   const studentSection = await sectionByHeading(page, "과제 · 평가");
   if (studentSection) {
+    await hideChatButton(page);
     await studentSection.asElement().screenshot({
       path: path.join(OUT, "18-assignment-student-list.png"),
     });
@@ -179,6 +188,7 @@ try {
   await page.goto(`${BASE}/teacher/classes/${classId}`, { waitUntil: "networkidle2" });
   const teacherSection = await sectionByHeading(page, "과제 · 평가");
   if (teacherSection) {
+    await hideChatButton(page);
     await teacherSection.asElement().screenshot({
       path: path.join(OUT, "16-assignment-teacher-list.png"),
     });

@@ -1,4 +1,4 @@
-// 과제 AI 채점 화면 4종을 캡처한다.
+// 과제 AI 채점 화면 3종을 캡처한다.
 //
 // [경고] 이 스크립트는 운영 DB에 임시 과제·채점기준·제출물을 만들었다 지우고, AI 채점을 실제로
 // 한 번 돌린다(공용 키 호출 1회).
@@ -6,8 +6,8 @@
 // 네 화면 모두 채점기준 파일과 채점 결과가 있어야 나타나서 평상시에는 찍을 수 없다.
 //   21-assignment-rubric      교사 과제 화면의 '채점기준 · AI 채점' 칸 (채점 전)
 //   22-assignment-ai-grade    AI 채점 결과 카드 (근거 펼침)
-//   23-teacher-student-detail 학생별 모아 보기 (클래스 학생 명단에서 이름을 눌렀을 때)
 //   24-student-grade-feedback 학생 과제 화면의 '선생님이 공개한 피드백'
+// 23(학생별 모아 보기)은 종합 채점 · 세특 칸이 함께 보여야 해서 capture-overall.mjs가 찍는다.
 //
 // 채점기준은 아래 RUBRIC 예시를 쓴다. 실제 학교 평가 계획서를 저장소에 넣지 않기 위해서다.
 // 중간에 강제 종료되면 제목이 '[캡처용]'으로 시작하는 과제와 그 파일이 남는다.
@@ -196,11 +196,6 @@ try {
   await page.waitForFunction(() => document.body.innerText.includes("학생에게 피드백 공개됨"), {
     timeout: 30_000,
   });
-
-  await page.goto(`${BASE}/teacher/classes/${classId}/students/${student.id}`, {
-    waitUntil: "networkidle2",
-  });
-  await shot(await page.$("main"), "23-teacher-student-detail");
 
   // ── 학생 화면 ────────────────────────────────────────────
   console.log("학생 화면");

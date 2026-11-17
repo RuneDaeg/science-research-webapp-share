@@ -6,6 +6,7 @@ import { SignedFileLink } from "@/components/SignedFileLink";
 import { RubricUploadWidget } from "@/components/RubricUploadWidget";
 import { GradeAllButton, RegradeButton } from "@/components/GradeButtons";
 import { AiGradeCard } from "@/components/AiGradeCard";
+import { DownloadAllButton } from "@/components/DownloadAllButton";
 import { deleteAssignmentAction } from "@/app/teacher/actions";
 import { computeGradeSignature } from "@/lib/ai/grading";
 import { formatKstDateTime } from "@/lib/datetime";
@@ -68,7 +69,7 @@ export default async function TeacherAssignmentPage({
   const { data: submissionFiles } = submissionIds.length
     ? await supabase
         .from("assignment_submission_files")
-        .select("id, submission_id, file_path, original_filename, uploaded_at")
+        .select("id, submission_id, file_path, original_filename, file_size, uploaded_at")
         .in("submission_id", submissionIds)
         .order("uploaded_at", { ascending: true })
     : {
@@ -77,9 +78,12 @@ export default async function TeacherAssignmentPage({
           submission_id: string;
           file_path: string;
           original_filename: string;
+          file_size: number | null;
           uploaded_at: string;
         }>,
       };
+  const fileCount = submissionFiles?.length ?? 0;
+  const totalBytes = (submissionFiles ?? []).reduce((sum, f) => sum + (f.file_size ?? 0), 0);
 
   const filesBySubmission = new Map<
     string,
@@ -190,7 +194,11 @@ export default async function TeacherAssignmentPage({
 
           <div className="space-y-2 border-t border-gray-100 pt-4">
             <GradeAllButton
-              submissionIds={toGrade}
+              endpoint="/api/assignments/grade"
+              requests={toGrade.map((submissionId) => ({ submissionId }))}
+              confirmMessage={
+                "한 명에 10~30초쯤 걸립니다.\n결과는 선생님 화면에만 보이고, 학생에게는 '공개'를 눌러야 피드백이 보입니다."
+              }
               disabledReason={
                 assignment.rubric_path ? undefined : "채점기준 파일을 먼저 올려주세요."
               }
@@ -205,9 +213,18 @@ export default async function TeacherAssignmentPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">
-          제출 현황 {total > 0 && `(${done} / ${total}명)`}
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold text-gray-900">
+            제출 현황 {total > 0 && `(${done} / ${total}명)`}
+          </h2>
+          {fileCount > 0 && (
+            <DownloadAllButton
+              assignmentId={assignmentId}
+              fileCount={fileCount}
+              totalBytes={totalBytes}
+            />
+          )}
+        </div>
 
         {done === 0 ? (
           <p className="rounded-lg border border-dashed border-gray-300 p-8 text-center text-sm text-gray-500">
@@ -265,7 +282,11 @@ export default async function TeacherAssignmentPage({
                     files.length > 0 && (
                       <p className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                         아직 AI 채점 전입니다.
-                        <RegradeButton submissionId={s.id} label="이 학생만 AI 채점" />
+                        <RegradeButton
+                          endpoint="/api/assignments/grade"
+                          request={{ submissionId: s.id }}
+                          label="이 학생만 AI 채점"
+                        />
                       </p>
                     )
                   )}

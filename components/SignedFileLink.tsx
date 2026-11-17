@@ -3,17 +3,19 @@
 import { useState } from "react";
 import { parseJsonResponse } from "@/lib/fetchJson";
 
-// 산출물(documentId), 과제 제출 파일(submissionFileId), 채점기준 파일(rubricAssignmentId) 중
-// 하나를 받는다. 권한 검증은 서버가 한다.
+// 산출물(documentId), 과제 제출 파일(submissionFileId), 과제 채점기준(rubricAssignmentId),
+// 클래스 평가 계획서(rubricClassId) 중 하나를 받는다. 권한 검증은 서버가 한다.
 export function SignedFileLink({
   documentId,
   submissionFileId,
   rubricAssignmentId,
+  rubricClassId,
   label,
 }: {
   documentId?: string;
   submissionFileId?: string;
   rubricAssignmentId?: string;
+  rubricClassId?: string;
   label: string;
 }) {
   const [loading, setLoading] = useState(false);
@@ -27,7 +29,13 @@ export function SignedFileLink({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          documentId ? { documentId } : rubricAssignmentId ? { rubricAssignmentId } : { submissionFileId },
+          documentId
+            ? { documentId }
+            : rubricAssignmentId
+              ? { rubricAssignmentId }
+              : rubricClassId
+                ? { rubricClassId }
+                : { submissionFileId },
         ),
       });
       const data = await parseJsonResponse<{ url?: string; error?: string }>(res);

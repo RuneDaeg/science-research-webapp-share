@@ -4,7 +4,11 @@ import { requireRole } from "@/lib/auth/requireRole";
 import { createClient } from "@/lib/supabase/server";
 import { SignedFileLink } from "@/components/SignedFileLink";
 import { AiGradeCard } from "@/components/AiGradeCard";
-import { computeGradeSignature } from "@/lib/ai/grading";
+import { OverallGradeCard } from "@/components/OverallGradeCard";
+import { SetukPanel } from "@/components/SetukPanel";
+import { computeSetukSignature } from "@/lib/ai/setuk";
+import { RegradeButton } from "@/components/GradeButtons";
+import { computeGradeSignature, computeOverallGradeSignature } from "@/lib/ai/grading";
 import { formatKstDate, formatKstDateTime } from "@/lib/datetime";
 import { FIELD_LABEL, STATUS_LABEL, documentDisplayLabel } from "@/lib/research/stage";
 import type {
@@ -12,6 +16,8 @@ import type {
   DocumentStage,
   ProjectStatus,
   ResearchField,
+  StudentOverallGrade,
+  StudentSetukDraft,
 } from "@/lib/types/db";
 
 // 학생 한 명이 이 클래스에서 쓴 것을 한 화면에 모은다 — 연구 산출물과 과제 제출물.
@@ -29,7 +35,7 @@ export default async function TeacherStudentPage({
   // RLS: 담당 클래스만 조회된다
   const { data: classRow } = await supabase
     .from("classes")
-    .select("id, name")
+    .select("id, name, rubric_path")
     .eq("id", classId)
     .maybeSingle();
   if (!classRow) notFound();
@@ -183,6 +189,42 @@ export default async function TeacherStudentPage({
   const pagePath = `/teacher/classes/${classId}/students/${studentId}`;
   const submittedCount = submissions?.length ?? 0;
 
+  // 수행평가 종합 채점(0012). 이 화면에 모인 파일 전체가 채점 대상이라, 같은 파일 경로로 signature를
+  // 만들어 '채점 뒤 파일이 바뀜'을 판단한다(lib/ai/gradingService.ts의 collectStudentClassFiles와 같은 범위).
+  const { data: overall } = await supabase
+    .from("student_overall_grades")
+    .select("*")
+    .eq("class_id", classId)
+    .eq("student_id", studentId)
+    .maybeSingle()
+    .overrideTypes<StudentOverallGrade, { merge: false }>();
+  const allFilePaths = [
+    ...(documents ?? []).map((d) => d.file_path),
+    ...(files ?? []).map((f) => f.file_path),
+  ];
+  // 세특 참고 초안(0013). 같은 파일 범위에 교사 메모까지 넣어 signature를 만든다.
+  const { data: setuk } = await supabase
+    .from("student_setuk_drafts")
+    .select("*")
+    .eq("class_id", classId)
+    .eq("student_id", studentId)
+    .maybeSingle()
+    .overrideTypes<StudentSetukDraft, { merge: false }>();
+  const setukStale =
+    !!setuk?.result &&
+    setuk.signature !==
+      computeSetukSignature({
+        rubricPath: classRow.rubric_path,
+        filePaths: allFilePaths,
+        teacherMemo: setuk.teacher_memo,
+      });
+
+  const overallStale =
+    !!overall &&
+    !!classRow.rubric_path &&
+    overall.signature !==
+      computeOverallGradeSignature({ rubricPath: classRow.rubric_path, filePaths: allFilePaths });
+
   return (
     <div className="space-y-8">
       <div className="space-y-1">
@@ -195,6 +237,53 @@ export default async function TeacherStudentPage({
           {documents?.length ?? 0}건 · 과제 제출 {submittedCount} / {assignments?.length ?? 0}
         </p>
       </div>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-gray-900">수행평가 종합 채점</h2>
+        {!classRow.rubric_path ? (
+          <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+            <Link href={`/teacher/classes/${classId}`} className="underline">
+              클래스 화면
+            </Link>
+            에서 평가 계획서를 올리면, 이 학생이 낸 파일 전체로 수행평가를 한꺼번에 채점할 수 있습니다.
+          </p>
+        ) : overall ? (
+          <OverallGradeCard grade={overall} stale={overallStale} />
+        ) : allFilePaths.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+            이 학생이 낸 파일이 아직 없어 채점할 수 없습니다.
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+            아래 파일 {allFilePaths.length}개를 평가 계획서의 수행평가별로 채점합니다. 30초~1분쯤 걸립니다.
+            <RegradeButton
+              endpoint="/api/classes/grade-overall"
+              request={{ classId, studentId }}
+              label="종합 채점하기"
+            />
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-gray-900">세특 참고 초안</h2>
+        <p className="text-xs text-gray-500">
+          아래 파일과 선생님 관찰 메모로 &lsquo;세부능력 및 특기사항&rsquo; 참고 초안을 만듭니다. 선생님 화면에만
+          보이며, 기재요령에 따라 그대로 입력하지 않고 고쳐 쓸 재료로만 씁니다.
+        </p>
+        <SetukPanel
+          classId={classId}
+          studentId={studentId}
+          initialMemo={setuk?.teacher_memo ?? ""}
+          result={setuk?.result ?? null}
+          stale={setukStale}
+          meta={
+            setuk?.result
+              ? `${formatKstDateTime(setuk.updated_at)} · ${setuk.model ?? ""}`
+              : null
+          }
+        />
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-gray-900">연구 산출물</h2>

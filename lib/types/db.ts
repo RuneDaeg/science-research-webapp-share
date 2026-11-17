@@ -39,6 +39,11 @@ export type ClassRow = {
   school_year: string | null;
   join_code: string;
   created_at: string;
+  // 수행평가 종합 채점에 쓰는 평가 계획서(0012). 클래스당 하나다.
+  rubric_path: string | null;
+  rubric_mime: string | null;
+  rubric_size: number | null;
+  rubric_filename: string | null;
 };
 
 export type ClassEnrollment = {
@@ -206,6 +211,59 @@ export type StudentAssignmentFeedback = {
   updated_at: string;
 };
 
+// 수행평가 종합 채점 결과(0012, student_overall_grades.result). 교사 화면 전용이다.
+export type OverallEvaluation = {
+  name: string; // 평가 계획서에 적힌 수행평가 이름 (예: "가. 과학 연구 설계와 …")
+  summary: string; // 교사용 한두 문장 요약
+  files_used: number[]; // 근거로 쓴 파일 번호(files의 no)
+  criteria: GradeCriterion[];
+  ungradable: Array<{ name: string; reason: string }>;
+  total_score: number | null;
+  max_score: number | null;
+};
+
+export type OverallGradeResult = {
+  // 채점 때 AI에게 보낸 파일 목록. 나중에 학생이 파일을 지워도 근거를 읽을 수 있게 함께 남긴다.
+  files: Array<{ no: number; label: string }>;
+  evaluations: OverallEvaluation[];
+  teacher_notes: string[];
+};
+
+export type StudentOverallGrade = {
+  id: string;
+  class_id: string;
+  student_id: string;
+  result: OverallGradeResult;
+  provider: string;
+  model: string;
+  signature: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// 세특 참고 초안(0013, student_setuk_drafts.result). 교사 화면 전용이다.
+export type SetukDraftResult = {
+  draft: string;
+  // 초안에 쓴 내용마다 근거 출처("파일 2", "선생님 메모"). 교사가 허위·과장 여부를 대조하는 데 쓴다.
+  evidence: Array<{ point: string; source: string }>;
+  teacher_additions: string[]; // 파일로 알 수 없어 교사가 관찰해서 덧붙일 것
+  checks: string[]; // 기재요령상 교사가 확인할 것(코드가 찾은 금지어 포함)
+  files: Array<{ no: number; label: string }>;
+};
+
+export type StudentSetukDraft = {
+  id: string;
+  class_id: string;
+  student_id: string;
+  teacher_memo: string | null;
+  result: SetukDraftResult | null;
+  provider: string | null;
+  model: string | null;
+  signature: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type AiUsageLog = {
   id: string;
   student_id: string | null;
@@ -341,6 +399,25 @@ export type Database = {
           signature: string;
         };
         Update: Partial<AssignmentAiGrade>;
+        Relationships: Relationships;
+      };
+      student_overall_grades: {
+        Row: StudentOverallGrade;
+        Insert: Partial<StudentOverallGrade> & {
+          class_id: string;
+          student_id: string;
+          result: OverallGradeResult;
+          provider: string;
+          model: string;
+          signature: string;
+        };
+        Update: Partial<StudentOverallGrade>;
+        Relationships: Relationships;
+      };
+      student_setuk_drafts: {
+        Row: StudentSetukDraft;
+        Insert: Partial<StudentSetukDraft> & { class_id: string; student_id: string };
+        Update: Partial<StudentSetukDraft>;
         Relationships: Relationships;
       };
       ai_usage_log: {

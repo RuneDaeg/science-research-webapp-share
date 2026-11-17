@@ -18,14 +18,41 @@ export async function POST(request: Request) {
   const submissionFileId = typeof body?.submissionFileId === "string" ? body.submissionFileId : "";
   const rubricAssignmentId =
     typeof body?.rubricAssignmentId === "string" ? body.rubricAssignmentId : "";
-  if (!documentId && !submissionFileId && !rubricAssignmentId) {
+  const rubricClassId = typeof body?.rubricClassId === "string" ? body.rubricClassId : "";
+  if (!documentId && !submissionFileId && !rubricAssignmentId && !rubricClassId) {
     return NextResponse.json(
-      { error: "documentId, submissionFileId, rubricAssignmentId 중 하나가 필요합니다." },
+      {
+        error:
+          "documentId, submissionFileId, rubricAssignmentId, rubricClassId 중 하나가 필요합니다.",
+      },
       { status: 400 },
     );
   }
 
   const supabase = await createClient();
+
+  // 클래스 평가 계획서(0012)도 교사 전용이다. classes는 반 학생에게도 조회되므로 teacher_id로 거른다.
+  if (rubricClassId) {
+    if (session.profile.role !== "teacher") {
+      return NextResponse.json({ error: "선생님만 볼 수 있습니다." }, { status: 403 });
+    }
+    const { data: cls } = await supabase
+      .from("classes")
+      .select("rubric_path")
+      .eq("id", rubricClassId)
+      .eq("teacher_id", session.userId)
+      .maybeSingle();
+    if (!cls?.rubric_path) {
+      return NextResponse.json({ error: "평가 계획서 파일을 찾을 수 없습니다." }, { status: 404 });
+    }
+    const { data, error } = await createAdminClient()
+      .storage.from("research-files")
+      .createSignedUrl(cls.rubric_path, 120);
+    if (error || !data) {
+      return NextResponse.json({ error: "링크 생성에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ url: data.signedUrl });
+  }
 
   // 채점기준 파일은 교사 전용이다. class_assignments는 반 학생에게도 조회되므로 역할을 따로 본다.
   if (rubricAssignmentId) {

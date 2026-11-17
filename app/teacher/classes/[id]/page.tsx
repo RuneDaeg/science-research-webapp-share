@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { AnnouncementForm } from "@/components/AnnouncementForm";
 import { deleteAnnouncementAction } from "@/app/teacher/actions";
 import { AssignmentForm } from "@/components/AssignmentForm";
+import { RubricUploadWidget } from "@/components/RubricUploadWidget";
+import { SignedFileLink } from "@/components/SignedFileLink";
+import { GradeAllButton } from "@/components/GradeButtons";
+import { computeOverallGradeSignature } from "@/lib/ai/grading";
+import { computeSetukSignature } from "@/lib/ai/setuk";
 import { formatKstDate, formatKstDateTime } from "@/lib/datetime";
 import { FIELD_LABEL, STATUS_LABEL } from "@/lib/research/stage";
 import type { ProjectStatus, ResearchField } from "@/lib/types/db";
@@ -21,7 +26,7 @@ export default async function TeacherClassPage({
   // RLS: 본인이 담당하는 클래스만 조회된다
   const { data: classRow } = await supabase
     .from("classes")
-    .select("id, name, school_year, join_code, created_at")
+    .select("id, name, school_year, join_code, created_at, rubric_path, rubric_filename")
     .eq("id", classId)
     .maybeSingle();
 
@@ -75,9 +80,9 @@ export default async function TeacherClassPage({
   const { data: submissionRows } = assignmentIds.length
     ? await supabase
         .from("assignment_submissions")
-        .select("assignment_id")
+        .select("id, assignment_id, student_id")
         .in("assignment_id", assignmentIds)
-    : { data: [] as Array<{ assignment_id: string }> };
+    : { data: [] as Array<{ id: string; assignment_id: string; student_id: string }> };
 
   const submissionCountByAssignment = new Map<string, number>();
   for (const row of submissionRows ?? []) {
@@ -86,6 +91,83 @@ export default async function TeacherClassPage({
       (submissionCountByAssignment.get(row.assignment_id) ?? 0) + 1,
     );
   }
+
+  // ── 수행평가 종합 채점(0012) ─────────────────────────────
+  // 학생마다 이 클래스에 낸 파일 경로를 모아 signature를 만든다. 아직 채점하지 않았거나 채점 뒤
+  // 파일이 바뀐 학생만 '전체 채점' 대상이 된다(gradingService의 collectStudentClassFiles와 같은 범위).
+  const projectIds = (projects ?? []).map((p) => p.id);
+  const { data: members } = projectIds.length
+    ? await supabase.from("project_members").select("project_id, student_id").in("project_id", projectIds)
+    : { data: [] as Array<{ project_id: string; student_id: string }> };
+  const { data: docPaths } = projectIds.length
+    ? await supabase.from("research_documents").select("project_id, file_path").in("project_id", projectIds)
+    : { data: [] as Array<{ project_id: string; file_path: string }> };
+  const submissionIds = (submissionRows ?? []).map((s) => s.id);
+  const { data: subFilePaths } = submissionIds.length
+    ? await supabase
+        .from("assignment_submission_files")
+        .select("submission_id, file_path")
+        .in("submission_id", submissionIds)
+    : { data: [] as Array<{ submission_id: string; file_path: string }> };
+  const { data: overallGrades } = await supabase
+    .from("student_overall_grades")
+    .select("student_id, signature")
+    .eq("class_id", classId);
+
+  const pathsByStudent = new Map<string, string[]>();
+  const addPath = (studentId: string, p: string) =>
+    pathsByStudent.set(studentId, [...(pathsByStudent.get(studentId) ?? []), p]);
+  for (const m of members ?? []) {
+    for (const d of (docPaths ?? []).filter((d) => d.project_id === m.project_id)) {
+      addPath(m.student_id, d.file_path);
+    }
+  }
+  const studentOfSubmission = new Map((submissionRows ?? []).map((s) => [s.id, s.student_id]));
+  for (const f of subFilePaths ?? []) {
+    const sid = studentOfSubmission.get(f.submission_id);
+    if (sid) addPath(sid, f.file_path);
+  }
+  const overallSignature = new Map((overallGrades ?? []).map((g) => [g.student_id, g.signature]));
+
+  // 세특 참고 초안(0013). 메모만 저장되고 초안이 없는 학생도 있다(result null).
+  const { data: setukRows } = await supabase
+    .from("student_setuk_drafts")
+    .select("student_id, teacher_memo, signature, result")
+    .eq("class_id", classId);
+  const setukByStudent = new Map((setukRows ?? []).map((r) => [r.student_id, r]));
+  const setukStatus = (studentId: string): "none" | "todo" | "stale" | "done" => {
+    const row = setukByStudent.get(studentId);
+    const paths = pathsByStudent.get(studentId) ?? [];
+    if (paths.length === 0 && !row?.teacher_memo) return "none";
+    if (!row?.result) return "todo";
+    return row.signature ===
+      computeSetukSignature({
+        rubricPath: classRow.rubric_path,
+        filePaths: paths,
+        teacherMemo: row.teacher_memo,
+      })
+      ? "done"
+      : "stale";
+  };
+  const setukTargets = (roster ?? [])
+    .filter((r) => ["todo", "stale"].includes(setukStatus(r.student_id)))
+    .map((r) => ({ classId, studentId: r.student_id }));
+
+  type OverallStatus = "no-files" | "todo" | "stale" | "done";
+  const overallStatus = (studentId: string): OverallStatus => {
+    const paths = pathsByStudent.get(studentId) ?? [];
+    if (paths.length === 0) return "no-files";
+    const saved = overallSignature.get(studentId);
+    if (!saved) return "todo";
+    if (!classRow.rubric_path) return "done";
+    return saved ===
+      computeOverallGradeSignature({ rubricPath: classRow.rubric_path, filePaths: paths })
+      ? "done"
+      : "stale";
+  };
+  const overallTargets = (roster ?? [])
+    .filter((r) => ["todo", "stale"].includes(overallStatus(r.student_id)))
+    .map((r) => ({ classId, studentId: r.student_id }));
 
   return (
     <div className="space-y-8">
@@ -207,6 +289,62 @@ export default async function TeacherClassPage({
       </section>
 
       <section className="space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900">수행평가 종합 채점 · 세특 초안</h2>
+        <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-4 text-sm">
+          <div className="space-y-2">
+            {classRow.rubric_path ? (
+              <p className="flex flex-wrap items-center gap-2 text-gray-700">
+                <span className="text-gray-500">평가 계획서</span>
+                <SignedFileLink
+                  rubricClassId={classId}
+                  label={classRow.rubric_filename ?? "평가 계획서"}
+                />
+              </p>
+            ) : (
+              <p className="text-gray-600">
+                수행평가 채점기준이 들어 있는 평가 계획서를 올리면, AI가 학생마다 이 클래스에 낸 파일
+                전체(연구 산출물과 과제 제출물)를 보고 계획서 안의 수행평가를 하나씩 채점합니다.
+              </p>
+            )}
+            <RubricUploadWidget
+              classId={classId}
+              hasRubric={!!classRow.rubric_path}
+              noun="평가 계획서"
+            />
+          </div>
+          <div className="space-y-2 border-t border-gray-100 pt-4">
+            <GradeAllButton
+              endpoint="/api/classes/grade-overall"
+              requests={overallTargets}
+              confirmMessage={
+                "한 명에 30초~1분쯤 걸립니다.\n결과는 선생님 화면에만 보이고 학생에게는 보이지 않습니다."
+              }
+              disabledReason={classRow.rubric_path ? undefined : "평가 계획서를 먼저 올려주세요."}
+            />
+            <p className="text-xs text-gray-500">
+              아직 채점하지 않았거나 채점 뒤 파일이 바뀐 학생만 채점합니다. 결과는 아래 명단에서
+              학생 이름을 누르면 볼 수 있습니다. AI 점수는 선생님이 검토할 초안입니다.
+            </p>
+          </div>
+          <div className="space-y-2 border-t border-gray-100 pt-4">
+            <GradeAllButton
+              endpoint="/api/classes/setuk"
+              requests={setukTargets}
+              label="세특 초안 만들기"
+              runningLabel="세특 초안 만드는 중"
+              confirmMessage={
+                "학생마다 낸 파일과 저장해 둔 관찰 메모로 세특 참고 초안을 만듭니다. 한 명에 10~30초쯤 걸립니다.\n기재요령상 AI 생성 자료는 그대로 입력할 수 없으니 반드시 고쳐 쓰세요."
+              }
+            />
+            <p className="text-xs text-gray-500">
+              초안이 없거나 파일·메모가 바뀐 학생만 만듭니다. 관찰 메모는 학생 이름을 눌러 학생마다
+              적어 두면 초안의 가장 앞선 근거가 됩니다. 평가 계획서가 있으면 성취기준 표현을 참고합니다.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-2">
         <h2 className="text-lg font-semibold text-gray-900">학생 명단</h2>
         <p className="text-xs text-gray-500">
           이름을 누르면 그 학생이 올린 연구 산출물과 과제 제출물을 한 화면에서 봅니다.
@@ -225,7 +363,44 @@ export default async function TeacherClassPage({
                 >
                   {r.profiles?.display_name?.trim() || "(이름 없음)"}
                 </Link>
-                <span className="text-xs text-gray-500">{formatKstDate(r.joined_at)} 참여</span>
+                <span className="flex items-center gap-2 text-xs text-gray-500">
+                  {classRow.rubric_path &&
+                    {
+                      "no-files": null,
+                      todo: (
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-600">
+                          채점 전
+                        </span>
+                      ),
+                      stale: (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-800">
+                          다시 채점 필요
+                        </span>
+                      ),
+                      done: (
+                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-indigo-800">
+                          AI 채점됨
+                        </span>
+                      ),
+                    }[overallStatus(r.student_id)]}
+                  {
+                    {
+                      none: null,
+                      todo: null,
+                      stale: (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-800">
+                          세특 다시 만들기
+                        </span>
+                      ),
+                      done: (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-800">
+                          세특 초안
+                        </span>
+                      ),
+                    }[setukStatus(r.student_id)]
+                  }
+                  {formatKstDate(r.joined_at)} 참여
+                </span>
               </li>
             ))}
           </ul>

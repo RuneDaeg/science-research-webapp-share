@@ -6,16 +6,23 @@ import { parseJsonResponse } from "@/lib/fetchJson";
 import { createClient } from "@/lib/supabase/client";
 import { validateUploadedFile, FileValidationError } from "@/lib/validation/fileValidation";
 
-// 교사가 과제에 채점기준 파일을 붙인다(이미 있으면 바꾼다).
+// 교사가 채점기준 파일을 붙인다(이미 있으면 바꾼다). 과제 하나의 채점기준(assignmentId)이거나,
+// 수행평가 종합 채점에 쓰는 클래스 평가 계획서(classId)다.
 //
 // 파일은 브라우저에서 Storage로 곧장 올라간다 — 학생 제출과 같은 구조다(AGENTS.md 참고).
 export function RubricUploadWidget({
   assignmentId,
+  classId,
   hasRubric,
+  noun = "채점기준",
 }: {
-  assignmentId: string;
+  assignmentId?: string;
+  classId?: string;
   hasRubric: boolean;
+  noun?: string;
 }) {
+  const base = classId ? "/api/classes/rubric" : "/api/assignments/rubric";
+  const target = classId ? { classId } : { assignmentId };
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +45,10 @@ export function RubricUploadWidget({
     setError(null);
     setLoading(true);
     try {
-      const ticketRes = await fetch("/api/assignments/rubric/upload-url", {
+      const ticketRes = await fetch(`${base}/upload-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignmentId, filename: file.name, size: file.size }),
+        body: JSON.stringify({ ...target, filename: file.name, size: file.size }),
       });
       const ticket = await parseJsonResponse<{ path?: string; token?: string; error?: string }>(
         ticketRes,
@@ -55,13 +62,13 @@ export function RubricUploadWidget({
         .uploadToSignedUrl(ticket.path, ticket.token, file);
       if (uploadError) throw new Error(`업로드에 실패했습니다: ${uploadError.message}`);
 
-      const res = await fetch("/api/assignments/rubric", {
+      const res = await fetch(base, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignmentId, path: ticket.path, originalFilename: file.name }),
+        body: JSON.stringify({ ...target, path: ticket.path, originalFilename: file.name }),
       });
       const data = await parseJsonResponse<{ error?: string }>(res);
-      if (!res.ok) throw new Error(data.error ?? "채점기준 등록에 실패했습니다.");
+      if (!res.ok) throw new Error(data.error ?? `${noun} 등록에 실패했습니다.`);
 
       if (fileInputRef.current) fileInputRef.current.value = "";
       router.refresh();
@@ -86,7 +93,7 @@ export function RubricUploadWidget({
         disabled={loading}
         className="rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
       >
-        {loading ? "올리는 중..." : hasRubric ? "채점기준 바꾸기" : "채점기준 올리기"}
+        {loading ? "올리는 중..." : hasRubric ? `${noun} 바꾸기` : `${noun} 올리기`}
       </button>
       {error && <p className="w-full text-xs text-red-600">{error}</p>}
     </form>
