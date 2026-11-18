@@ -9,6 +9,9 @@
 //   26-student-overall      학생별 모아 보기의 종합 채점 결과 (근거 펼침)
 //   27-student-setuk        학생별 모아 보기의 세특 참고 초안 (관찰 메모 + 초안 + 근거)
 //
+// GUIDE_ONLY_SETUK=1이면 27만 다시 찍는다(종합 채점은 부르지 않아 AI 호출 1회). 26의 결과와 설명서의
+// 예시 설명을 건드리지 않고 세특 화면만 바뀌었을 때 쓴다.
+//
 // 학생 파일은 테스트 학생이 이미 올려 둔 시연용 산출물을 그대로 쓴다. 평가 계획서와 관찰 메모는
 // 아래 예시를 쓴다 — 실제 학교 평가 계획서를 저장소에 넣지 않기 위해서다.
 // 끝나면 클래스의 평가 계획서를 원래대로 돌리고, 이번에 만든 채점 결과·세특 초안을 지운다
@@ -17,6 +20,7 @@
 import puppeteer from "puppeteer-core";
 import { createClient } from "@supabase/supabase-js";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const CHROME =
@@ -68,6 +72,8 @@ const RUBRIC = `[예시] 2학기 과학과제연구 수행평가 계획 (100점)
 
 // 선생님이 수업 중에 적어 둔 것처럼 보일 관찰 메모. 파일로는 알 수 없는 내용이어야
 // 초안이 메모를 어떻게 쓰는지 드러난다.
+const ONLY_SETUK = process.env.GUIDE_ONLY_SETUK === "1";
+
 const MEMO =
   "예비 실험에서 거품이 넘쳐 부피를 못 잰 문제를 스스로 찾아 과산화수소 양을 줄여 다시 실험함. " +
   "중간 발표에서 40℃ 이후 기체 발생량이 줄어든 까닭을 묻는 질문에 효소 변성 가능성과 추가 측정 계획을 들어 답함.";
@@ -159,25 +165,29 @@ try {
 
   console.log("교사 화면");
   await login(page, process.env.GUIDE_TEACHER_EMAIL, process.env.GUIDE_TEACHER_PASSWORD);
-  await page.goto(`${BASE}/teacher/classes/${classId}`, { waitUntil: "networkidle2" });
-  await shot(await sectionByHeading(page, "수행평가 종합 채점 · 세특 초안"), "25-class-overall");
+  if (!ONLY_SETUK) {
+    await page.goto(`${BASE}/teacher/classes/${classId}`, { waitUntil: "networkidle2" });
+    await shot(await sectionByHeading(page, "수행평가 종합 채점 · 세특 초안"), "25-class-overall");
+  }
 
   await page.goto(`${BASE}/teacher/classes/${classId}/students/${student.id}`, {
     waitUntil: "networkidle2",
   });
-  await shot(await page.$("main"), "23-teacher-student-detail");
-  await clickButton(page, "종합 채점하기");
-  await page.waitForFunction(() => document.body.innerText.includes("AI 채점 초안"), {
-    timeout: 300_000,
-  });
-  // 전부 펼치면 A4에 넣었을 때 글자가 너무 작아진다. 첫 수행평가의 근거와 보낸 파일 목록만 펼친다.
-  const overallSection = await sectionByHeading(page, "수행평가 종합 채점");
-  await overallSection.evaluate((sec) => {
-    const ds = sec.querySelectorAll("details");
-    if (ds.length) ds[0].open = true;
-    if (ds.length > 1) ds[ds.length - 1].open = true;
-  });
-  await shot(overallSection, "26-student-overall");
+  if (!ONLY_SETUK) {
+    await shot(await page.$("main"), "23-teacher-student-detail");
+    await clickButton(page, "종합 채점하기");
+    await page.waitForFunction(() => document.body.innerText.includes("AI 채점 초안"), {
+      timeout: 300_000,
+    });
+    // 전부 펼치면 A4에 넣었을 때 글자가 너무 작아진다. 첫 수행평가의 근거와 보낸 파일 목록만 펼친다.
+    const overallSection = await sectionByHeading(page, "수행평가 종합 채점");
+    await overallSection.evaluate((sec) => {
+      const ds = sec.querySelectorAll("details");
+      if (ds.length) ds[0].open = true;
+      if (ds.length > 1) ds[ds.length - 1].open = true;
+    });
+    await shot(overallSection, "26-student-overall");
+  }
 
   await page.type(`#memo-${student.id}`, MEMO);
   // 초안이 없을 때는 메모를 고쳤어도 버튼 이름이 '세특 초안 만들기'다. 누르면 메모도 함께 저장된다.
@@ -187,6 +197,14 @@ try {
   });
   await page.evaluate(() => document.querySelectorAll("details").forEach((d) => (d.open = true)));
   await shot(await sectionByHeading(page, "세특 참고 초안"), "27-student-setuk");
+  // 설명서의 '그대로 입력하지 마세요' 예시 문장은 이 초안을 가리킨다. 다시 찍었으면 대조할 수 있게 남긴다.
+  const { data: made } = await admin
+    .from("student_setuk_drafts").select("result").eq("class_id", classId).eq("student_id", student.id).maybeSingle();
+  if (made?.result) {
+    const out = path.join(os.tmpdir(), "guide-setuk-draft.json");
+    fs.writeFileSync(out, JSON.stringify(made.result, null, 2));
+    console.log(`  초안을 ${out}에 남겼습니다`);
+  }
 } finally {
   await admin.from("classes").update(originalRubric).eq("id", classId);
   if (rubricPath) await admin.storage.from("research-files").remove([rubricPath]);

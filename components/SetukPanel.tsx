@@ -4,10 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { parseJsonResponse } from "@/lib/fetchJson";
 import type { SetukDraftResult } from "@/lib/types/db";
+import { neisByteLength, SETUK_MAX_BYTES } from "@/lib/neisBytes";
 
-// 기재요령의 과목별 세특 최대 글자수(한글 기준). lib/ai/setuk.ts의 SETUK_MAX_CHARS와 같은 값이다 —
-// 그 파일은 서버 전용 모듈을 불러와 클라이언트에서 import할 수 없어 여기 다시 적는다.
-const MAX_CHARS = 500;
 const MEMO_MAX = 1000;
 
 // 세특 참고 초안. 교사 화면 전용이다.
@@ -67,6 +65,10 @@ export function SetukPanel({
     }
   }
 
+  // 나이스와 같이 바이트로 센다(한글 3, 공백·영어·숫자 1). 글자 수는 참고로 함께 보인다.
+  const bytes = result ? neisByteLength(result.draft) : 0;
+  // 근거가 모자라면 AI가 초안을 비워 둔다. 까닭은 '확인할 것'에 나온다.
+  const empty = !!result && !result.draft.trim();
   const length = result?.draft.length ?? 0;
 
   return (
@@ -121,29 +123,42 @@ export function SetukPanel({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-medium text-gray-900">AI 참고 초안</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs ${length > MAX_CHARS ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-700"}`}
-              >
-                {length} / {MAX_CHARS}자
-              </span>
+              {!empty && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs ${bytes > SETUK_MAX_BYTES ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-700"}`}
+                  title="나이스 기준: 한글 3바이트, 공백·영어·숫자 1바이트"
+                >
+                  {bytes.toLocaleString()} / {SETUK_MAX_BYTES.toLocaleString()}바이트 · {length}자
+                </span>
+              )}
               {stale && (
                 <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800">
                   파일이나 메모가 바뀜 — 다시 만들기 필요
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={copy}
-              className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
-            >
-              {copied ? "복사됨" : "초안 복사"}
-            </button>
+            {!empty && (
+              <button
+                type="button"
+                onClick={copy}
+                className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+              >
+                {copied ? "복사됨" : "초안 복사"}
+              </button>
+            )}
           </div>
 
-          <p className="rounded-md bg-gray-50 p-3 leading-relaxed whitespace-pre-wrap text-gray-900">
-            {result.draft}
-          </p>
+          {empty ? (
+            <p className="rounded-md border border-dashed border-gray-300 p-3 text-gray-600">
+              자료에서 확인되는 근거가 모자라 초안을 만들지 않았습니다. 지어낸 문장으로 분량을 채우지
+              않기 위해서입니다. 아래 확인할 것을 보고 관찰 메모를 더 적거나 학생 파일이 쌓인 뒤 다시
+              만들어 주세요.
+            </p>
+          ) : (
+            <p className="rounded-md bg-gray-50 p-3 leading-relaxed whitespace-pre-wrap text-gray-900">
+              {result.draft}
+            </p>
+          )}
 
           <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-900">
             <span className="font-medium">그대로 입력하지 마세요.</span> 2026학년도 기재요령은 AI로

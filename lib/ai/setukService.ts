@@ -157,6 +157,19 @@ export async function draftStudentSetuk(
     cred: { ...cred, model: outcome.model },
     durationMs,
   });
+  // 1,500바이트를 넘어 한 번 더 부른 '줄이기' 호출도 따로 남긴다(비용 집계가 어긋나지 않게).
+  for (const call of outcome.extraCalls) {
+    await logAiUsage({
+      studentId: null,
+      classId,
+      documentId: null,
+      kind: "grade",
+      cred: call.model ? { ...cred, model: call.model } : cred,
+      durationMs: call.durationMs,
+      ok: call.error === null,
+      errorKind: call.error === null ? null : classifyAiError(call.error),
+    });
+  }
 
   return { status: "created" };
 }
