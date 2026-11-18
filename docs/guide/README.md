@@ -18,6 +18,7 @@ capture-delete.mjs 연구 과제 삭제 화면 2종을 찍는다 → shots/14~15
 capture-assignment.mjs 과제/평가 화면 5종을 찍는다 → shots/16~20 (아래 주의사항 참고)
 capture-grading.mjs 과제 AI 채점 화면 3종을 찍는다 → shots/21 · 22 · 24 (아래 주의사항 참고)
 capture-overall.mjs 학생별 모아 보기 · 종합 채점 · 세특 초안 화면 4종을 찍는다 → shots/23 · 25~27
+capture-received.mjs 학생별 모아 보기 · 따로 받은 자료 화면 2종을 찍는다 → shots/23 · 28 (AI 호출 없음)
 render.mjs         guide.html을 대상별 A4 PDF 두 벌로 인쇄한다 → guides/
 shots/             캡처된 화면 (커밋되어 있으므로 캡처 없이 PDF만 다시 만들 수 있다)
 ```
@@ -129,6 +130,19 @@ node docs/guide/capture-overall.mjs
 
 끝나면 클래스의 평가 계획서를 원래대로 돌리고 이번에 만든 결과를 지운다. 중간에 강제 종료되면
 그 클래스의 평가 계획서 이름이 `[예시]`로 시작하는 채로 남으니 비워 줄 것.
+
+## 학생별 모아 보기 · 따로 받은 자료 화면 (shots/23 · 28)
+
+`capture-received.mjs`가 테스트 클래스에 예시 평가 계획서를, 테스트 학생에게 '따로 받은 자료' 두 건을
+잠시 붙여 학생별 모아 보기 전체(채점 전)와 '따로 받은 자료' 칸을 찍는다. **AI는 부르지 않는다.**
+23은 `capture-overall.mjs`도 찍지만, 그쪽을 다시 돌리면 26·27의 AI 결과가 바뀌어 설명서의 예시 문장
+(세특 초안의 부풀린 문장)까지 고쳐야 한다. 화면 구성만 바뀌었으면 이 스크립트로 23을 다시 찍는다.
+
+```bash
+GUIDE_STUDENT_EMAIL=... GUIDE_TEACHER_EMAIL=... GUIDE_TEACHER_PASSWORD=... node docs/guide/capture-received.mjs
+```
+
+끝나면 평가 계획서와 따로 받은 자료를 원래대로 돌린다.
 
 ## 주의 — 스크린샷에 실제 학생 정보가 들어가지 않게
 

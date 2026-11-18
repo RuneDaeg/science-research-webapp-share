@@ -127,6 +127,12 @@ export default async function TeacherClassPage({
     const sid = studentOfSubmission.get(f.submission_id);
     if (sid) addPath(sid, f.file_path);
   }
+  // 학생이 따로 보내 선생님이 올려 둔 파일(0014)도 같은 범위에 든다.
+  const { data: receivedPaths } = await supabase
+    .from("student_received_files")
+    .select("student_id, file_path")
+    .eq("class_id", classId);
+  for (const r of receivedPaths ?? []) addPath(r.student_id, r.file_path);
   const overallSignature = new Map((overallGrades ?? []).map((g) => [g.student_id, g.signature]));
 
   // 세특 참고 초안(0013). 메모만 저장되고 초안이 없는 학생도 있다(result null).

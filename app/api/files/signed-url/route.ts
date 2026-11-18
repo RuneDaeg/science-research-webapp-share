@@ -19,17 +19,40 @@ export async function POST(request: Request) {
   const rubricAssignmentId =
     typeof body?.rubricAssignmentId === "string" ? body.rubricAssignmentId : "";
   const rubricClassId = typeof body?.rubricClassId === "string" ? body.rubricClassId : "";
-  if (!documentId && !submissionFileId && !rubricAssignmentId && !rubricClassId) {
+  const receivedFileId = typeof body?.receivedFileId === "string" ? body.receivedFileId : "";
+  if (!documentId && !submissionFileId && !rubricAssignmentId && !rubricClassId && !receivedFileId) {
     return NextResponse.json(
       {
         error:
-          "documentId, submissionFileId, rubricAssignmentId, rubricClassId 중 하나가 필요합니다.",
+          "documentId, submissionFileId, rubricAssignmentId, rubricClassId, receivedFileId 중 하나가 필요합니다.",
       },
       { status: 400 },
     );
   }
 
   const supabase = await createClient();
+
+  // 따로 받은 자료(0014)는 교사 전용이다. RLS가 담당 교사에게만 행을 보여준다.
+  if (receivedFileId) {
+    const { data: received } = await supabase
+      .from("student_received_files")
+      .select("file_path")
+      .eq("id", receivedFileId)
+      .maybeSingle();
+    if (!received) {
+      return NextResponse.json(
+        { error: "파일을 찾을 수 없거나 접근 권한이 없습니다." },
+        { status: 404 },
+      );
+    }
+    const { data, error } = await createAdminClient()
+      .storage.from("research-files")
+      .createSignedUrl(received.file_path, 120);
+    if (error || !data) {
+      return NextResponse.json({ error: "링크 생성에 실패했습니다." }, { status: 500 });
+    }
+    return NextResponse.json({ url: data.signedUrl });
+  }
 
   // 클래스 평가 계획서(0012)도 교사 전용이다. classes는 반 학생에게도 조회되므로 teacher_id로 거른다.
   if (rubricClassId) {

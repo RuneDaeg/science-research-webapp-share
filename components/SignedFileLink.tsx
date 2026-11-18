@@ -4,18 +4,21 @@ import { useState } from "react";
 import { parseJsonResponse } from "@/lib/fetchJson";
 
 // 산출물(documentId), 과제 제출 파일(submissionFileId), 과제 채점기준(rubricAssignmentId),
-// 클래스 평가 계획서(rubricClassId) 중 하나를 받는다. 권한 검증은 서버가 한다.
+// 클래스 평가 계획서(rubricClassId), 따로 받은 자료(receivedFileId) 중 하나를 받는다.
+// 권한 검증은 서버가 한다.
 export function SignedFileLink({
   documentId,
   submissionFileId,
   rubricAssignmentId,
   rubricClassId,
+  receivedFileId,
   label,
 }: {
   documentId?: string;
   submissionFileId?: string;
   rubricAssignmentId?: string;
   rubricClassId?: string;
+  receivedFileId?: string;
   label: string;
 }) {
   const [loading, setLoading] = useState(false);
@@ -35,7 +38,9 @@ export function SignedFileLink({
               ? { rubricAssignmentId }
               : rubricClassId
                 ? { rubricClassId }
-                : { submissionFileId },
+                : receivedFileId
+                  ? { receivedFileId }
+                  : { submissionFileId },
         ),
       });
       const data = await parseJsonResponse<{ url?: string; error?: string }>(res);

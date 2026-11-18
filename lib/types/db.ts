@@ -264,6 +264,22 @@ export type StudentSetukDraft = {
   updated_at: string;
 };
 
+// 학생이 메신저·메일 등으로 교사에게 따로 보낸 파일을 교사가 올려 둔 것(0014). 교사 전용.
+export type StudentReceivedFile = {
+  id: string;
+  class_id: string;
+  student_id: string;
+  uploaded_by: string;
+  file_path: string;
+  file_mime: string;
+  file_size: number | null;
+  original_filename: string;
+  note: string | null;
+  // 'YYYY-MM-DD' (date 컬럼). 교사가 받은 날이다 — 올린 날과 다를 수 있다.
+  received_on: string;
+  created_at: string;
+};
+
 export type AiUsageLog = {
   id: string;
   student_id: string | null;
@@ -418,6 +434,19 @@ export type Database = {
         Row: StudentSetukDraft;
         Insert: Partial<StudentSetukDraft> & { class_id: string; student_id: string };
         Update: Partial<StudentSetukDraft>;
+        Relationships: Relationships;
+      };
+      student_received_files: {
+        Row: StudentReceivedFile;
+        Insert: Partial<StudentReceivedFile> & {
+          class_id: string;
+          student_id: string;
+          uploaded_by: string;
+          file_path: string;
+          file_mime: string;
+          original_filename: string;
+        };
+        Update: Partial<StudentReceivedFile>;
         Relationships: Relationships;
       };
       ai_usage_log: {

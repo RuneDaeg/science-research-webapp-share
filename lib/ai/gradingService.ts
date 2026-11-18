@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { extractText } from "@/lib/extraction";
 import { getServerCredential } from "./serverCredential";
 import { classifyAiError, logAiUsage } from "./usage";
-import { formatKstDate } from "@/lib/datetime";
+import { formatKstDate, formatKstDateOnly, kstDateOnlyToIso } from "@/lib/datetime";
 import { documentDisplayLabel } from "@/lib/research/stage";
 import type { DocumentStage } from "@/lib/types/db";
 import {
@@ -186,8 +186,9 @@ export interface CollectedFile {
   name: string;
 }
 
-// 학생 한 명이 이 클래스에서 낸 파일을 모두 모은다 — 참여한 연구의 산출물(팀원이 올린 것 포함)과
-// 이 클래스 과제에 낸 파일. 교사 화면(학생별 모아 보기)이 보여주는 것과 같은 범위다.
+// 학생 한 명이 이 클래스에서 낸 파일을 모두 모은다 — 참여한 연구의 산출물(팀원이 올린 것 포함),
+// 이 클래스 과제에 낸 파일, 학생이 따로 보내 선생님이 올려 둔 파일(0014). 교사 화면(학생별 모아
+// 보기)과 클래스 화면 명단 배지가 같은 범위로 signature를 만든다 — 한 곳만 바꾸지 말 것(AGENTS.md).
 export async function collectStudentClassFiles(
   classId: string,
   studentId: string,
@@ -259,6 +260,23 @@ export async function collectStudentClassFiles(
         label: `과제 '${title}' 제출 · ${f.original_filename} · ${formatKstDate(f.uploaded_at)} 제출`,
       });
     }
+  }
+
+  // 따로 받은 자료는 올린 날이 아니라 선생님이 받은 날을 쓴다. 9월에 받은 계획서를 12월에 올려도
+  // AI가 평가 시기를 맞게 짝짓도록 하기 위해서다.
+  const { data: received } = await admin
+    .from("student_received_files")
+    .select("file_path, original_filename, note, received_on")
+    .eq("class_id", classId)
+    .eq("student_id", studentId);
+  for (const r of received ?? []) {
+    const note = r.note?.trim() ? ` · ${r.note.trim()}` : "";
+    files.push({
+      path: r.file_path,
+      name: r.original_filename,
+      sortKey: kstDateOnlyToIso(r.received_on),
+      label: `학생이 선생님께 따로 보낸 파일${note} · ${r.original_filename} · ${formatKstDateOnly(r.received_on)} 받음`,
+    });
   }
 
   // 낸 순서대로 놓는다. AI가 평가 시기와 제출일을 맞춰 보며 파일을 수행평가에 짝짓는다.

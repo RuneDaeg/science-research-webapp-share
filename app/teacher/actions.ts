@@ -272,3 +272,30 @@ export async function setGradeReleasedAction(formData: FormData): Promise<void> 
   // 폼이 보낸 경로는 다시 그리는 데만 쓴다. 교사 화면 경로가 아니면 무시한다.
   if (revalidate.startsWith("/teacher/")) revalidatePath(revalidate);
 }
+
+// 학생별 모아 보기의 '따로 받은 자료'(0014)에서 파일 하나를 지운다.
+export async function deleteReceivedFileAction(formData: FormData): Promise<void> {
+  await requireRole("teacher");
+
+  const fileId = String(formData.get("fileId") ?? "");
+  if (!fileId) return;
+
+  // RLS: 담당 클래스의 자료만 조회·삭제된다(student_received_files_*_teacher)
+  const supabase = await createClient();
+  const { data: file } = await supabase
+    .from("student_received_files")
+    .select("id, class_id, student_id, file_path")
+    .eq("id", fileId)
+    .maybeSingle();
+  if (!file) return;
+
+  const { error } = await supabase.from("student_received_files").delete().eq("id", fileId);
+  if (error) return;
+
+  // 경로 최상위가 올린 교사 uid라 보통은 교사 세션으로도 지워지지만, 올린 사람과 지우는 사람이
+  // 다를 수 있어(담당 교사 교체 등) service-role로 지운다. 행은 위에서 RLS로 확인했다.
+  await createAdminClient().storage.from("research-files").remove([file.file_path]);
+
+  revalidatePath(`/teacher/classes/${file.class_id}/students/${file.student_id}`);
+  revalidatePath(`/teacher/classes/${file.class_id}`);
+}

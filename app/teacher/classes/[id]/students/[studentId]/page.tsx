@@ -6,10 +6,12 @@ import { SignedFileLink } from "@/components/SignedFileLink";
 import { AiGradeCard } from "@/components/AiGradeCard";
 import { OverallGradeCard } from "@/components/OverallGradeCard";
 import { SetukPanel } from "@/components/SetukPanel";
+import { ReceivedFileUploadWidget } from "@/components/ReceivedFileUploadWidget";
+import { DeleteReceivedFileButton } from "@/components/DeleteReceivedFileButton";
 import { computeSetukSignature } from "@/lib/ai/setuk";
 import { RegradeButton } from "@/components/GradeButtons";
 import { computeGradeSignature, computeOverallGradeSignature } from "@/lib/ai/grading";
-import { formatKstDate, formatKstDateTime } from "@/lib/datetime";
+import { formatKstDate, formatKstDateOnly, formatKstDateTime, todayKstDate } from "@/lib/datetime";
 import { FIELD_LABEL, STATUS_LABEL, documentDisplayLabel } from "@/lib/research/stage";
 import type {
   AssignmentAiGrade,
@@ -20,7 +22,8 @@ import type {
   StudentSetukDraft,
 } from "@/lib/types/db";
 
-// 학생 한 명이 이 클래스에서 쓴 것을 한 화면에 모은다 — 연구 산출물과 과제 제출물.
+// 학생 한 명이 이 클래스에서 쓴 것을 한 화면에 모은다 — 연구 산출물, 과제 제출물, 학생이 따로
+// 보내 선생님이 올려 둔 파일(0014).
 // 클래스 화면의 학생 명단에서 이름을 누르면 온다. 상담이나 수행평가 확인 때 여기저기 열어 보지
 // 않아도 되게 하려는 화면이다. 모든 조회는 RLS가 걸린 교사 세션으로 한다.
 export default async function TeacherStudentPage({
@@ -186,6 +189,16 @@ export default async function TeacherStudentPage({
     : { data: [] as AssignmentAiGrade[] };
   const gradeBySubmission = new Map((grades ?? []).map((g) => [g.submission_id, g]));
 
+  // ── 따로 받은 자료(0014) ────────────────────────────────
+  // 학생이 메신저·메일로 보낸 것을 선생님이 올려 둔 파일. 교사 전용이고 종합 채점·세특에만 쓰인다.
+  const { data: receivedFiles } = await supabase
+    .from("student_received_files")
+    .select("id, file_path, original_filename, note, received_on, created_at")
+    .eq("class_id", classId)
+    .eq("student_id", studentId)
+    .order("received_on", { ascending: true })
+    .order("created_at", { ascending: true });
+
   const pagePath = `/teacher/classes/${classId}/students/${studentId}`;
   const submittedCount = submissions?.length ?? 0;
 
@@ -201,6 +214,7 @@ export default async function TeacherStudentPage({
   const allFilePaths = [
     ...(documents ?? []).map((d) => d.file_path),
     ...(files ?? []).map((f) => f.file_path),
+    ...(receivedFiles ?? []).map((r) => r.file_path),
   ];
   // 세특 참고 초안(0013). 같은 파일 범위에 교사 메모까지 넣어 signature를 만든다.
   const { data: setuk } = await supabase
@@ -235,6 +249,7 @@ export default async function TeacherStudentPage({
         <p className="text-sm text-gray-500">
           {formatKstDate(enrollment.joined_at)} 참여 · 연구 {projects?.length ?? 0}건 · 산출물{" "}
           {documents?.length ?? 0}건 · 과제 제출 {submittedCount} / {assignments?.length ?? 0}
+          {(receivedFiles?.length ?? 0) > 0 && ` · 따로 받은 자료 ${receivedFiles?.length}건`}
         </p>
       </div>
 
@@ -449,6 +464,32 @@ export default async function TeacherStudentPage({
             })}
           </ul>
         )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-gray-900">따로 받은 자료</h2>
+        <p className="text-xs text-gray-500">
+          학생이 메신저나 메일로 보낸 파일을 여기에 올려 두면 수행평가 종합 채점과 세특 참고 초안에 함께
+          쓰입니다. 선생님 화면에만 보이고, 과제 제출 현황이나 &lsquo;제출 파일 모두 받기&rsquo;에는 들어가지
+          않습니다.
+        </p>
+        {receivedFiles && receivedFiles.length > 0 && (
+          <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white px-4">
+            {receivedFiles.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                <div className="min-w-0 space-y-0.5">
+                  <SignedFileLink receivedFileId={r.id} label={r.original_filename} />
+                  {r.note && <p className="text-xs whitespace-pre-wrap text-gray-600">{r.note}</p>}
+                </div>
+                <span className="flex items-center gap-3 text-xs text-gray-500">
+                  {formatKstDateOnly(r.received_on)} 받음
+                  <DeleteReceivedFileButton fileId={r.id} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <ReceivedFileUploadWidget classId={classId} studentId={studentId} today={todayKstDate()} />
       </section>
     </div>
   );
