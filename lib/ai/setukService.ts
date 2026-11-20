@@ -105,17 +105,13 @@ export async function draftStudentSetuk(
     );
   }
 
-  const projectTitles = [
-    ...new Set(collected.map((f) => f.projectTitle).filter((t): t is string => !!t)),
-  ];
-
   const startedAt = Date.now();
   let outcome;
   try {
     outcome = await draftSetukWithAi(
       cred,
       { teacherMemo: memo, rubric, files },
-      { projectTitles, studentName: enrollment.profiles?.display_name?.trim() || null },
+      { studentName: enrollment.profiles?.display_name?.trim() || null },
     );
   } catch (err) {
     await logAiUsage({

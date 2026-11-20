@@ -7,7 +7,7 @@ export default function PrivacyPage() {
     <div className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
       <h1 className="text-2xl font-bold text-gray-900">개인정보처리방침</h1>
       <p className="mt-2 text-sm text-gray-500">
-        이 서비스는 학교 수업(과학과제연구) 운영을 위한 내부용 도구입니다.
+        이 서비스는 학교 수업(과학과제연구) 운영을 위한 내부용 도구입니다. 최종 수정: 2026. 11. 21.
       </p>
 
       <div className="mt-8 space-y-6 text-sm leading-relaxed text-gray-700">
@@ -15,16 +15,30 @@ export default function PrivacyPage() {
           <h2 className="text-base font-semibold text-gray-900">1. 수집하는 항목</h2>
           <ul className="list-disc space-y-1 pl-5">
             <li>계정 정보: 이메일, 이름(표시 이름), 비밀번호(암호화 저장)</li>
-            <li>학습 정보: 소속 클래스, 연구 과제 정보, 업로드한 산출물 파일과 그 텍스트</li>
-            <li>피드백 기록: AI가 생성한 피드백, 선생님이 작성한 피드백</li>
+            <li>
+              학습 정보: 소속 클래스와 팀, 연구 과제 정보, 업로드한 산출물과 과제 제출 파일, 그 파일에서
+              뽑은 텍스트
+            </li>
+            <li>
+              선생님이 올린 학생 자료: 학생이 메신저나 메일로 선생님께 따로 보낸 파일(받은 날과 선생님
+              메모 포함)
+            </li>
+            <li>
+              피드백 · 평가 기록: AI가 생성한 피드백, 선생님이 작성한 피드백, AI 채점 초안과 수행평가 종합
+              채점 초안, 선생님 관찰 메모와 세특 참고 초안
+            </li>
+            <li>
+              이용 기록: AI 호출 시각, 종류, 성공 여부, 응답 시간(하루 사용 한도와 AI 응답 상태 표시에
+              씁니다)
+            </li>
           </ul>
         </section>
 
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-gray-900">2. 이용 목적</h2>
           <p>
-            제출한 산출물에 대한 탐구 피드백 제공, 담당 선생님의 지도와 확인, 서비스 운영 및 남용
-            방지에만 이용합니다.
+            제출한 산출물에 대한 탐구 피드백 제공, 담당 선생님의 지도와 평가, 학교생활기록부 작성 보조,
+            서비스 운영 및 남용 방지에만 이용합니다.
           </p>
         </section>
 
@@ -40,9 +54,10 @@ export default function PrivacyPage() {
           <p>
             선생님이 과제 · 평가의 AI 채점을 실행하면 그 과제의 채점기준 파일과 학생 제출 파일도 같은
             방식으로 전송됩니다. 수행평가 종합 채점을 실행하면 평가 계획서와 함께 그 학생이 클래스에 낸
-            산출물과 과제 제출 파일 전체가 전송됩니다. 세특 참고 초안을 만들 때도 같은 파일과 선생님의
-            관찰 메모가 전송되며, 학생 이름은 보내지 않습니다. AI가 만든 점수와 초안은 선생님만 볼 수 있는
-            참고용이며, 최종 점수와 학교생활기록부 기재 내용은 선생님이 정합니다.
+            산출물, 과제 제출 파일, 선생님께 따로 보내 선생님이 올려 둔 파일 전체가 전송됩니다. 세특 참고
+            초안을 만들 때도 같은 파일과 선생님의 관찰 메모가 전송되며, 학생 이름은 보내지 않습니다. AI가
+            만든 점수와 초안은 선생님만 볼 수 있는 참고용이며, 최종 점수와 학교생활기록부 기재 내용은
+            선생님이 정합니다.
           </p>
           <p>
             화면 오른쪽 아래 &lsquo;사용법 도우미&rsquo;에 입력한 질문도 같은 제공사로 전송됩니다.
@@ -53,22 +68,50 @@ export default function PrivacyPage() {
 
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-gray-900">4. 열람 범위</h2>
-          <p>
-            업로드한 산출물과 피드백은 같은 팀의 팀원과 담당 선생님만 볼 수 있습니다. 다른 반이나
-            다른 팀 학생은 접근할 수 없습니다. AI 피드백의 자기평가 별점은 선생님에게만 표시됩니다.
-          </p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>
+              연구 산출물과 AI 피드백은 같은 팀의 팀원과 담당 선생님만 볼 수 있습니다. 다른 반이나 다른
+              팀 학생은 접근할 수 없습니다.
+            </li>
+            <li>과제 제출 파일은 제출한 학생 본인과 담당 선생님만 볼 수 있습니다.</li>
+            <li>
+              선생님이 따로 받아 올린 파일, 관찰 메모, AI 채점 점수, 종합 채점 초안, 세특 참고 초안은
+              담당 선생님만 볼 수 있습니다. 학생에게는 선생님이 공개한 피드백만 보입니다.
+            </li>
+            <li>AI 피드백의 자기평가 별점은 선생님에게만 표시됩니다.</li>
+            <li>
+              관리자 화면에는 계정 목록과 소속 클래스, AI 호출량 같은 운영 정보만 나옵니다.
+            </li>
+          </ul>
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-base font-semibold text-gray-900">5. 보관 및 파기</h2>
+          <h2 className="text-base font-semibold text-gray-900">5. 저장 위치와 처리 위탁</h2>
+          <p>서비스 운영을 위해 다음 서비스를 이용합니다.</p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Supabase: 계정, 데이터베이스, 업로드한 파일 저장(호주 시드니 지역 서버)</li>
+            <li>Vercel: 웹 화면과 서버 기능 실행(서울 지역 서버)</li>
+            <li>생성형 AI 제공사: 3번에 적은 피드백 · 채점 · 초안 생성</li>
+            <li>GitHub: 6번에 적은 백업 보관(비공개 저장소)</li>
+          </ul>
+        </section>
+
+        <section className="space-y-2">
+          <h2 className="text-base font-semibold text-gray-900">6. 보관 및 파기</h2>
           <p>
             수업 운영 기간 동안 보관하며, 학교의 요청이나 수업 종료 시 관리자가 삭제합니다. 학생은
-            본인이 올린 산출물을 직접 삭제할 수 있습니다.
+            본인이 올린 산출물과 과제 제출 파일을 직접 삭제할 수 있고, 선생님이 따로 받아 올린 파일은
+            선생님이 삭제할 수 있습니다.
+          </p>
+          <p>
+            장애에 대비해 매일 새벽 데이터베이스와 파일을 비공개 저장소에 백업합니다. 백업은 복구에만
+            쓰며, 화면에서 지운 자료도 백업에는 남아 있을 수 있습니다. 수업 종료 등으로 자료를 파기할
+            때는 백업도 함께 지웁니다.
           </p>
         </section>
 
         <section className="space-y-2">
-          <h2 className="text-base font-semibold text-gray-900">6. 문의</h2>
+          <h2 className="text-base font-semibold text-gray-900">7. 문의</h2>
           <p>담당 선생님 또는 학교 관리자에게 문의해주세요.</p>
         </section>
       </div>
